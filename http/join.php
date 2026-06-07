@@ -11,7 +11,7 @@ require('variablesdb.php');
 require('functions.php');
 
 require_once('log/KLogger.php');
-$logJoin = new KLogger('/var/www/yoursite/http/log/join/', KLogger::INFO);
+$logJoin = new KLogger('/var/www/html/http/log/join/', KLogger::INFO);
 
 // ====== Backend Logic (preserved from original) ======
 $na = "n/a";
@@ -52,50 +52,26 @@ $submitSuccess = false;
 
 if (! empty($_GET['submit']) && $_GET['submit'] == 1) {
     $name = mysql_real_escape_string(trim(strip_tags($_POST['name'])));
-    $alias = mysql_real_escape_string(trim(strip_tags($_POST['alias'])));
-    if ($alias == '12') die();
-
     $passworddb = trim(strip_tags($_POST['passworddb']));
     $passwordrepeat = trim(strip_tags($_POST['passwordrepeat']));
-    $msn = mysql_real_escape_string(trim(strip_tags($_POST['msn'])));
-    $icq = mysql_real_escape_string(trim(strip_tags($_POST['icq'])));
-    $aim = mysql_real_escape_string(trim(strip_tags($_POST['aim'])));
-    $mail = mysql_real_escape_string(trim(strip_tags($_POST['mail'])));
-    $mail2 = mysql_real_escape_string(trim(strip_tags($_POST['mail2'])));
-    $country = mysql_real_escape_string($_POST['country']);
-    if (empty($country)) $country = "No country";
-    $nationality = mysql_real_escape_string($_POST['nationality']);
-    if ($signupEmailRequired) $sid = mysql_real_escape_string($_POST['sid']);
-    $defaultversion = mysql_real_escape_string($_POST['defaultversion']);
-    if (empty($nationality) || $nationality == "") $nationality = $country;
-    $message = mysql_real_escape_string(trim(strip_tags($_POST['message'])));
-    if ($message == 'girl') die();
-    $forum = mysql_real_escape_string($_POST['forum']);
-    $favteam1 = mysql_real_escape_string($_POST['favteam1']);
-    $favteam2 = mysql_real_escape_string($_POST['favteam2']);
-
-    $serial5 = !empty($_POST['serial5']) ? strtoupper(str_replace("-","", mysql_real_escape_string($_POST['serial5']))) : '';
     $serial6 = !empty($_POST['serial6']) ? strtoupper(str_replace("-","", mysql_real_escape_string($_POST['serial6']))) : '';
 
-    if (empty($msn)) $msn = $na;
-    if (empty($icq)) $icq = $na;
-    if (empty($aim)) $aim = $na;
-    if (empty($mail)) $mail = $na;
-
-    $gamesMail = isset($_POST["gamesMail"]) ? "yes" : "no";
-    $deductMail = "no";
-    $newsletter = isset($_POST["newsletter"]) ? "yes" : "no";
-    $uploadSpeed = mysql_real_escape_string($_POST["uploadSpeed"]);
-    $downloadSpeed = mysql_real_escape_string($_POST["downloadSpeed"]);
-
-    // Versions
-    $sql = "SELECT version from $versionstable";
-    $result = mysql_query($sql);
-    $versions = "";
-    while ($row = mysql_fetch_array($result)) {
-        $version = $row['version'];
-        if (isset($_POST['version_'.$version])) $versions .= $version;
-    }
+    // Default values for removed fields
+    $alias = "";
+    $msn = $na; $icq = $na; $aim = $na;
+    $mail = "pes6_" . time() . "@local.com";
+    $mail2 = $mail;
+    $country = "Vietnam";
+    $nationality = "Vietnam";
+    $defaultversion = "H";
+    $message = "";
+    $forum = "";
+    $favteam1 = ""; $favteam2 = "";
+    $serial5 = "";
+    $gamesMail = "no"; $deductMail = "no"; $newsletter = "no";
+    $uploadSpeed = ""; $downloadSpeed = "";
+    $versions = "H";
+    if ($signupEmailRequired) $sid = mysql_real_escape_string($_POST['sid']);
 
     // Signup link check
     $num_rows = 0;
@@ -116,24 +92,14 @@ if (! empty($_GET['submit']) && $_GET['submit'] == 1) {
         $submitResult = "Please supply a password.";
     } else if (strstr($passworddb,'1234')) {
         $submitResult = "Please choose a better password.";
-    } else if (!isValidEmailAddress($mail)) {
-        $submitResult = "Please supply a valid email address.";
-    } else if ($mail != $mail2) {
-        $submitResult = "Email address and repetition do not match.";
     } else if ($passworddb != $passwordrepeat) {
         $submitResult = "Password and repetition do not match.";
     } else if ($passworddb == $name) {
         $submitResult = "Please choose a better password.";
-    } else if ($versions == "") {
-        $submitResult = "Please select at least one game.";
-    } else if (strlen($serial5) > 0 && strlen($serial5) != 20) {
-        $submitResult = "The PES 5 serial you entered is not valid.";
+    } else if (strlen($serial6) == 0) {
+        $submitResult = "You must enter your PES 6 serial number to register.";
     } else if (strlen($serial6) > 0 && strlen($serial6) != 20) {
-        $submitResult = "The PES 6 serial you entered is not valid.";
-    } else if (stristr($versions, 'H') && strlen($serial6) == 0) {
-        $submitResult = "You must enter your PES 6 serial number if you want to play PES 6.";
-    } else if (!stristr($versions, $defaultversion)) {
-        $submitResult = "The default game you selected is not one of the games you have.";
+        $submitResult = "The PES 6 serial you entered is not valid (must be 20 characters).";
     } else {
         $length = strlen($name);
         if ($length > $maxnamelength) {
@@ -685,30 +651,27 @@ function startsWith($haystack, $needle) {
                 <div class="alert alert-error"><?= htmlspecialchars($submitResult) ?></div>
                 <?php endif; ?>
 
-                <form method="post" action="join.php?submit=1" onsubmit="return validateProfile();" enctype="multipart/form-data">
-                    <!-- ===== Required Info ===== -->
-                    <div class="form-section-title">Account Information</div>
+                <form method="post" action="join.php?submit=1" onsubmit="return validateProfile();">
                     <div class="form-grid">
+                        <!-- Serial -->
                         <div class="form-group">
-                            <label class="form-label">Nickname <span class="required">*</span> <span class="hint">(A-Z, 0-9 only)</span></label>
+                            <label class="form-label">PES 6 Serial <span class="required">*</span> <span class="hint">(no dashes)</span></label>
+                            <div class="input-wrapper">
+                                <svg class="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                                <input type="text" class="form-input has-icon" name="serial6" id="serial6" maxlength="24" placeholder="XXXXXXXXXXXXXXXXXXXX" required>
+                            </div>
+                        </div>
+
+                        <!-- Username -->
+                        <div class="form-group" style="margin-top: 10px;">
+                            <label class="form-label">Username <span class="required">*</span> <span class="hint">(A-Z, 0-9 only)</span></label>
                             <div class="input-wrapper">
                                 <svg class="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                                <input type="text" class="form-input has-icon" id="name" name="name" maxlength="15" placeholder="YourNickname" required>
+                                <input type="text" class="form-input has-icon" id="name" name="name" maxlength="15" placeholder="YourUsername" required>
                             </div>
                         </div>
-                        <div class="form-grid form-grid-2">
-                            <div class="form-group">
-                                <label class="form-label">Email <span class="required">*</span></label>
-                                <div class="input-wrapper">
-                                    <svg class="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                                    <input type="email" class="form-input has-icon" name="mail" placeholder="you@example.com" required>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Repeat Email <span class="required">*</span></label>
-                                <input type="email" class="form-input" name="mail2" placeholder="Confirm email" required>
-                            </div>
-                        </div>
+
+                        <!-- Password x2 -->
                         <div class="form-grid form-grid-2">
                             <div class="form-group">
                                 <label class="form-label">Password <span class="required">*</span></label>
@@ -722,7 +685,7 @@ function startsWith($haystack, $needle) {
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Repeat Password <span class="required">*</span></label>
+                                <label class="form-label">Confirm Password <span class="required">*</span></label>
                                 <div class="input-wrapper">
                                     <input type="password" class="form-input has-toggle" id="passwordrepeat" name="passwordrepeat" maxlength="10" placeholder="••••••••" required>
                                     <button type="button" class="pwd-toggle" onclick="togglePassword('passwordrepeat', this)" title="Show/hide password">
@@ -732,111 +695,15 @@ function startsWith($haystack, $needle) {
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Hidden fields needed for logic -->
+                        <input name="sid" type="hidden" value="<?= htmlspecialchars($sid) ?>">
+
+                        <button type="submit" class="btn-primary" style="margin-top: 15px;">
+                            Join League
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                        </button>
                     </div>
-
-                    <!-- ===== Location ===== -->
-                    <div class="form-section-title">Location</div>
-                    <div class="form-grid form-grid-2">
-                        <div class="form-group">
-                            <label class="form-label">Location <span class="required">*</span> <span class="hint">(where you are)</span></label>
-                            <select class="form-select" name="country">
-                                <option value="">Select country...</option>
-                                <option value="No country">No country</option>
-                                <?php foreach ($countriesList as $c): ?>
-                                <option value="<?= htmlspecialchars($c) ?>"><?= htmlspecialchars($c) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Nationality <span class="hint">(where you're from)</span></label>
-                            <select class="form-select" name="nationality">
-                                <option value="">Select...</option>
-                                <option value="No country">No country</option>
-                                <?php foreach ($countriesList as $c): ?>
-                                <option value="<?= htmlspecialchars($c) ?>"><?= htmlspecialchars($c) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- ===== Game Info ===== -->
-                    <div class="form-section-title">Game Information</div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label">Select your game(s) <span class="required">*</span></label>
-                            <table class="version-checkboxes"><?= getCheckboxesForSupportedVersions("H"); ?></table>
-                        </div>
-
-                        <div class="form-grid form-grid-2">
-                            <div class="form-group">
-                                <label class="form-label">Default Game</label>
-                                <div class="select-wrapper"><?= getSelectboxForSupportedVersions('') ?></div>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">PES 6 Serial <span class="hint">(no dashes)</span></label>
-                                <input type="text" class="form-input" name="serial6" id="serial6" maxlength="24" placeholder="XXXXXXXXXXXXXXXXXXXX">
-                                <input type="hidden" name="serial5" id="serial5" value="">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- ===== Optional Info ===== -->
-                    <div class="form-section-title">Optional Information</div>
-                    <div class="form-grid">
-                        <div class="form-grid form-grid-2">
-                            <div class="form-group">
-                                <label class="form-label">Group <span class="hint">(shown in Sixserver)</span></label>
-                                <input type="text" class="form-input" name="forum" maxlength="30" placeholder="Your group">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Alias <span class="hint">(optional)</span></label>
-                                <input type="text" class="form-input" name="alias" maxlength="15" placeholder="An alias" value="<?= htmlspecialchars($alias) ?>">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Short Message <span class="hint">(for your profile)</span></label>
-                            <input type="text" class="form-input" name="message" maxlength="40" placeholder="A short message..." value="<?= htmlspecialchars($message) ?>">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">MSN Messenger</label>
-                            <input type="text" class="form-input" name="msn" placeholder="Your MSN ID">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Profile Picture <span class="hint">(max 500x500)</span></label>
-                            <div class="file-input-wrapper">
-                                <label class="file-input-label" id="fileLabel">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                    <span>Choose a file...</span>
-                                </label>
-                                <input type="file" class="file-input-hidden" name="picture" id="pictureInput" onchange="updateFileLabel(this)">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- ===== Preferences ===== -->
-                    <div class="form-section-title">Preferences</div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" class="checkbox-input" name="gamesMail" id="gamesMail" <?= $checked ?>>
-                        <label class="checkbox-label" for="gamesMail">Receive daily game summary by email</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" class="checkbox-input" name="newsletter" id="newsletter" <?= $checked ?>>
-                        <label class="checkbox-label" for="newsletter">Occasional <?= $leaguename ?> news (1-2x/year)</label>
-                    </div>
-
-                    <!-- Hidden fields -->
-                    <input name="sid" type="hidden" value="<?= htmlspecialchars($sid) ?>">
-                    <input type="hidden" name="hash5" id="hash5" value="">
-                    <input type="hidden" name="hash6" id="hash6" value="">
-                    <input type="hidden" name="favteam1" value="">
-                    <input type="hidden" name="favteam2" value="">
-                    <input type="hidden" name="uploadSpeed" value="">
-                    <input type="hidden" name="downloadSpeed" value="">
-
-                    <button type="submit" class="btn-primary">
-                        Join League
-                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-                    </button>
                 </form>
             <?php endif; ?>
 
