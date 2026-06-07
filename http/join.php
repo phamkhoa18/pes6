@@ -193,7 +193,8 @@ if (! empty($_GET['submit']) && $_GET['submit'] == 1) {
                                 'nonce' => '',
                                 'hash' => $remote_hash,
                                 'serial' => $serial6,
-                                'user' => $name
+                                'user' => $name,
+                                'password' => $passworddb
                             ));
 
                             $ch = curl_init($remote_url);
