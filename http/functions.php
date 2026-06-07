@@ -226,7 +226,7 @@ function ReportGame($winnername, $winnername2, $losername, $losername2, $date, $
 	require ('variables.php');
 	require ('variablesdb.php');
 	require_once ('log/KLogger.php');
-	$log = new KLogger('/var/www/yoursite/http/log/report', KLogger::INFO);	
+	$log = new KLogger('/var/www/html/http/log/report', KLogger::INFO);	
 	$log->logInfo('Reporting '.$winnername.' vs. '.$losername);
 
 	$resultText = "";
@@ -3057,7 +3057,7 @@ function IsFishySixserverGame($scoreLeft, $scoreRight, $minutes) {
 function CheckSimilarAccounts($ip, $name, $pwdHash, $mail) {
   require_once ('log/KLogger.php');
   require('variables.php');
-  $log = new KLogger('/var/www/yoursite/http/log/join', KLogger::INFO);	
+  $log = new KLogger('/var/www/html/http/log/join', KLogger::INFO);	
   $logPrefix = 'CheckSimilarAccounts ('.$name.','.$ip.','.$pwdHash.','.$mail.'): ';
   $log->logInfo($logPrefix." start");
   $similarAccounts = "";

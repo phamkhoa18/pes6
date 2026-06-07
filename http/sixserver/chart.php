@@ -8,7 +8,7 @@ require('../variables.php');
 require('../variablesdb.php');
 
 require_once('../log/KLogger.php');
-$log = new KLogger('/var/www/yoursite/http/log/general/', KLogger::INFO);	
+$log = new KLogger('/var/www/html/http/log/general/', KLogger::INFO);	
 
 $type = 1;
 if (isset($_GET['type'])) {

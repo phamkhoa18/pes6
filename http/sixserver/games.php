@@ -62,7 +62,7 @@ if (!empty($_GET['id'])) {
 	$id = "";
 }
 
- $log = new KLogger('/var/www/yoursite/http/log/general/', KLogger::INFO);	
+ $log = new KLogger('/var/www/html/http/log/general/', KLogger::INFO);	
 
 $maxDisplayedPages = 25;
 $gamesPerPage = 30;

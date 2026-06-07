@@ -16,7 +16,7 @@ if(!empty($_POST['id'])) {
   $gameId = "";
 }
 
-$log = new KLogger('/var/www/yoursite/http/log/general/', KLogger::INFO);	
+$log = new KLogger('/var/www/html/http/log/general/', KLogger::INFO);	
 
 $left = $subNavText.getRaquo().getSubNavigation($subpage, null);
 ?>

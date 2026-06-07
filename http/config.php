@@ -6,6 +6,6 @@
  $databasepass = getenv('DB_PASS') ?: "password"; // the password to your database
  
  $wwwroot = "/var/www/html/http/";
- $leaguename = getenv('LEAGUE_NAME') ?: "localhost:8080"; // no www. prefix!
- $directory = "http://".$leaguename; //the full URL (including www.)
+ $leaguename = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : (getenv('LEAGUE_NAME') ?: "localhost"); 
+ $directory = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https://" : "http://") . $leaguename; 
 ?>

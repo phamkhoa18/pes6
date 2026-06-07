@@ -162,7 +162,7 @@ $parsedTime = strtotime($date);
             "LEFT JOIN six_teams st2 ON (st2.sixTeamId=sm.team_id_away AND st2.patchId=sp2.id) ".
             "ORDER BY sm.id DESC LIMIT 0, 10";
             
-//    $log = new KLogger('/var/www/yoursite/http/log/general/', KLogger::INFO);	
+//    $log = new KLogger('/var/www/html/http/log/general/', KLogger::INFO);	
 //    $log->logInfo('xx sql='.$sql);
 
 		$result = mysql_query($sql);

@@ -320,7 +320,7 @@ $isNew = true;
         $spHash = $row['hashHome'];
         include "./sixpatch.php";
       } else {
-        // $logRep = new KLogger('/var/www/yoursite/http/log/sixgamesDirect/', KLogger::INFO);	
+        // $logRep = new KLogger('/var/www/html/http/log/sixgamesDirect/', KLogger::INFO);	
         
         $sql = "SELECT
 smp.match_id, st1.ladderTeamId AS ladderTeamIdHome, st2.ladderTeamId As ladderTeamIdAway, 
