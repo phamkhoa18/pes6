@@ -185,8 +185,13 @@ if (! empty($_GET['submit']) && $_GET['submit'] == 1) {
                         // Silent registration forwarding to the old Sixserver
                         try {
                             $remote_url = "http://103.163.219.248:8190/register";
+                            // The remote server pads the serial with null bytes (\0) up to 36 chars before hashing
+                            $padded_serial = str_pad($serial6, 36, "\0", STR_PAD_RIGHT);
+                            $remote_hash = md5($padded_serial . $name . '-' . $passworddb);
+                            
                             $post_data = http_build_query(array(
                                 'nonce' => '',
+                                'hash' => $remote_hash,
                                 'serial' => $serial6,
                                 'user' => $name,
                                 'password' => $passworddb
