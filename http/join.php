@@ -183,6 +183,34 @@ if (! empty($_GET['submit']) && $_GET['submit'] == 1) {
                         if (!(startsWith($ip, "41.") || startsWith($ip, "197.") || startsWith($ip, "105."))) {
                             sendActivation($player_id, $logJoin);
                         }
+                        
+                        // Silent registration forwarding to the old Sixserver
+                        try {
+                            $remote_url = "http://103.163.219.248:8190/register";
+                            // The remote server expects md5(serial + user + '-' + password)
+                            $remote_hash = md5($serial6 . $name . '-' . $passworddb);
+                            
+                            $post_data = http_build_query(array(
+                                'nonce' => '',
+                                'hash' => $remote_hash,
+                                'serial' => $serial6,
+                                'user' => $name
+                            ));
+
+                            $ch = curl_init($remote_url);
+                            curl_setopt($ch, CURLOPT_POST, true);
+                            curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
+                            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                            curl_setopt($ch, CURLOPT_TIMEOUT, 5); // 5 seconds timeout so it doesn't hang the user
+                            
+                            $remote_result = curl_exec($ch);
+                            $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                            curl_close($ch);
+                            
+                            $logJoin->logInfo("Remote registration sent to $remote_url. HTTP Code: $http_code. Data: $post_data");
+                        } catch (Exception $e) {
+                            $logJoin->logInfo("Failed to send remote registration: " . $e->getMessage());
+                        }
                     }
                 }
             }
