@@ -90,12 +90,10 @@ if (! empty($_GET['submit']) && $_GET['submit'] == 1) {
         $submitResult = "Please use only alphanumeric characters (A-Z, 0-9).";
     } else if ($passworddb == "") {
         $submitResult = "Please supply a password.";
-    } else if (strstr($passworddb,'1234')) {
-        $submitResult = "Please choose a better password.";
+    } else if (strlen($passworddb) < 3) {
+        $submitResult = "Password is too short (minimum 3 characters).";
     } else if ($passworddb != $passwordrepeat) {
         $submitResult = "Password and repetition do not match.";
-    } else if ($passworddb == $name) {
-        $submitResult = "Please choose a better password.";
     } else if (strlen($serial6) == 0) {
         $submitResult = "You must enter your PES 6 serial number to register.";
     } else if (strlen($serial6) > 0 && strlen($serial6) != 20) {
@@ -775,7 +773,7 @@ function validateProfile() {
     if (name === '') { alert('Please enter a nickname.'); return false; }
     if (pwd === '') { alert('Please enter a password.'); return false; }
     if (pwd !== pwd2) { alert('Passwords do not match.'); return false; }
-    if (pwd.length < 4) { alert('Password is too short.'); return false; }
+    if (pwd.length < 3) { alert('Password must be at least 3 characters.'); return false; }
     return true;
 }
 </script>
