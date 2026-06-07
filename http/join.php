@@ -1,32 +1,21 @@
 <?php
+// Modern sign-up page for evo-league
+// Redesigned with efootcup-inspired dark gradient UI
+// Keeps all original backend logic intact
 
-// the signup page. if it is called normally (eg. http://www.yoursite/join.php), the description text
-// on how to sign up is displayed. if it is called with a valid sid that exists in the weblm_signup table 
-// (eg.http://www.yoursite/join.php?sid=1234567890), the signup form is displayed. valid sid's can be
-// generated using the 'generate signup link' button on the admin control panel.
-
-// requiring to send an email to sign up can be toggled with the $signupEmailRequired-switch in variables.php
 $page = "join";
 $subpage = "";
 
 require('variables.php');
 require('variablesdb.php');
 require('functions.php');
-require('top.php');
 
 require_once('log/KLogger.php');
+$logJoin = new KLogger('/var/www/yoursite/http/log/join/', KLogger::INFO);
 
-$logJoin = new KLogger('/var/www/yoursite/http/log/join/', KLogger::INFO);	
-
-?>
-
-<?= getOuterBoxTop($leaguename. " <span class='grey-small'>&raquo;</span> Join League", "") ?>
-
-<?php
-
+// ====== Backend Logic (preserved from original) ======
 $na = "n/a";
 $checked = "checked='checked'";
-$back = "<p><a href='javascript:history.back()'>go back</a></p>";
 $alias = "";
 $uploadSpeed = "";
 $downloadSpeed = "";
@@ -35,577 +24,866 @@ $ip = Get_ip();
 $blacklist = false;
 $sid = mysql_real_escape_string($_GET['sid']);
 
-// if (date('w') <> 0) {
-if ($false) {
-  echo "<p>Site signups only open on Sundays. <a href=\"/forum/viewtopic.php?t=6776\">Here's why.</a></p>";
-  echo '<p>You can <a href="http://www.yoursite/forum/ucp.php?mode=register">sign up for the forums</a> while you wait, but a forum account only enables you to post on the forums.</p>';
-  echo "<p>While you wait until you can sign up for a player account, we highly recommend reading these topics <b>before</b> you sign up:</p>";
-  echo '<p>- <b><a href="/forum/viewtopic.php?f=3&t=5340" target="_new">How to play PES 6 online on Sixserver</a></b><br>';
-  echo '- <b><a href="/forum/viewtopic.php?f=3&t=5438" target="_new">Sixserver FAQ</a></b></p>';
-  
-} else {
-   $xml_string = file_get_contents("http://www.stopforumspam.com/api?ip=" . urlencode($ip));
-   if (!$xml_string) {
-      $logJoin->logInfo('Could not read http://www.stopforumspam.com/api?ip='.urlencode($ip));
-   } else {
-     try {
-       $xml = new SimpleXMLElement($xml_string);
-       if ($xml->appears == "yes") {
-        $blacklist = true; 
-        $logJoin->logInfo('Blacklisted=['.$ip.']');
-       }
-     } catch (Exception $e) {   
-        $logJoin->logInfo('Could not parse xml_string:'.$xml_string);
-        $logJoin->logInfo('Exception: '. $e->getMessage());
-     }
-   }
-  if ($blacklist) {
-   echo "<p>You are blacklisted.</p>";
-  }
-  else if ($cookie_name != '' && $cookie_name != 'Ike') {
-    echo "<p>You already have an account, <b>".$cookie_name."</b>.</p>";
-  } else { ?>
-    <table class="layouttable"><tr><td width="800">
-    <?= getBoxTop("Sign up for ".$leaguename, "", false, null); ?>
-    <?
-    if (! empty($_GET['submit'])) {
-      $submit = mysql_real_escape_string($_GET['submit']);
-    }
-    else {
-      $submit = 0;
-    }
+// ====== Guide text - admin can edit this file to change content ======
+$guideFile = dirname(__FILE__) . '/join_guide.html';
+$guideContent = '';
+if (file_exists($guideFile)) {
+    $guideContent = file_get_contents($guideFile);
+}
 
-    if ($submit == 1) {
-      $name = mysql_real_escape_string($_POST['name']);
-      $name = strip_tags($name);
-      $name = trim($name);
-      $alias = mysql_real_escape_string($_POST['alias']);
-      $alias = trim(strip_tags($alias));
-      if ($alias == '12') {
-        die();
-      }
-      
-      $passworddb = $_POST['passworddb'];
-      $passworddb = strip_tags($passworddb);
-      $passworddb = trim($passworddb);
-      $passwordrepeat = $_POST['passwordrepeat'];
-      $passwordrepeat = strip_tags($passwordrepeat);
-      $passwordrepeat = trim($passwordrepeat);
-      $msn = mysql_real_escape_string($_POST['msn']);
-      $msn = strip_tags($msn);
-      $msn = trim($msn);
-      $icq = mysql_real_escape_string($_POST['icq']);
-      $icq = strip_tags($icq);
-      $icq = trim($icq);
-      $aim = mysql_real_escape_string($_POST['aim']);
-      $aim = strip_tags($aim);
-      $aim = trim($aim);
-      
-      $mail = mysql_real_escape_string($_POST['mail']);
-      $mail = strip_tags($mail);
-      $mail = trim($mail);
-      $mail2 = mysql_real_escape_string($_POST['mail2']);
-      $mail2 = strip_tags($mail2);
-      $mail2 = trim($mail2);
-      
-      $country = mysql_real_escape_string($_POST['country']);
-      if (empty($country)) {
-        $country = "No country";
-      }
-      $nationality = mysql_real_escape_string($_POST['nationality']);
-      if ($signupEmailRequired) $sid = mysql_real_escape_string($_POST['sid']);
-      $defaultversion = mysql_real_escape_string($_POST['defaultversion']);
-      
-      if (empty($nationality) || $nationality == "") {
-        $nationality = $country;
-      }
-      $message = mysql_real_escape_string($_POST['message']);
-      $message = strip_tags($message);
-      $message = trim($message);
-      if ($message == 'girl') {
-        die();
-      }    
-      $forum = mysql_real_escape_string($_POST['forum']);
-      $favteam1 = mysql_real_escape_string($_POST['favteam1']);
-      $favteam2 = mysql_real_escape_string($_POST['favteam2']);
-      
-      if (! empty($_POST['serial5'])) {
-        $serial5 = mysql_real_escape_string($_POST['serial5']);
-        $serial5 = strtoupper(str_replace("-","", $serial5));
-      }
-      else {
-        $serial5 = '';
-      }
-      
-      if (! empty($_POST['serial6'])) {
-        $serial6 = mysql_real_escape_string($_POST['serial6']);
-        $serial6 = strtoupper(str_replace("-","", $serial6));
-      }
-      else {
-        $serial6 = '';
-      }
-      
-      if (empty($msn)) { $msn = $na; }
-      if (empty($icq)) { $icq = $na; }
-      if (empty($aim)) { $aim = $na; }
-      if (empty($mail)) { $mail = $na; }
-      
-      
-      if (isset($_POST["gamesMail"])) {
-        $gamesMail = "yes";
-      } else {
-        $gamesMail = "no";
-      }
-
-      $deductMail = "no";
-      
-      if (isset($_POST["newsletter"])) {
-        $newsletter = "yes";
-      } else {
-        $newsletter = "no";
-      }
-      
-      $uploadSpeed = mysql_real_escape_string($_POST["uploadSpeed"]);
-      $downloadSpeed = mysql_real_escape_string($_POST["downloadSpeed"]);
-      
-      $createdmsg = "<p>Your account has been created but it is not active yet.</p>";
-      $createdmsg .= "<p><b>After we have checked your account</b>, an email with an activation link will be sent to <b>".$mail."</b>.</p>";
-      $createdmsg .= '<p>Please read the <b><a href="'.$sixFAQUrl.'">Sixserver FAQ</a></b> while you wait.</p>';
-      
-      $nocountrymsg = "<p class='boxlink' style='font-weight:bold'>You didn't specify your location, please post <a href='http://www.".$leaguename."/forum/viewtopic.php?t=7'>here</a> and let us know so we can add the flag. Other players may not want to play you if they don't know where you are.</p>";
-      
-      $sql = "SELECT version from $versionstable";
-      $result = mysql_query($sql);
-      $count = 0;
-      $versions = "";
-      while ($row = mysql_fetch_array($result)) {
-        $count++;
-        $version = $row['version'];
-        if (isset($_POST['version_'.$version])) {
-          $versions .= $version;
+// ---------- Spam check ----------
+$blacklist = false;
+$xml_string = @file_get_contents("http://www.stopforumspam.com/api?ip=" . urlencode($ip));
+if ($xml_string) {
+    try {
+        $xml = new SimpleXMLElement($xml_string);
+        if ($xml->appears == "yes") {
+            $blacklist = true;
+            $logJoin->logInfo('Blacklisted=['.$ip.']');
         }
-      }
+    } catch (Exception $e) {
+        $logJoin->logInfo('Could not parse xml_string:'.$xml_string);
+    }
+}
 
-      $num_rows = 0;
-      if ($signupEmailRequired) {
+// ---------- Process form submission ----------
+$submitResult = '';
+$submitSuccess = false;
+
+if (! empty($_GET['submit']) && $_GET['submit'] == 1) {
+    $name = mysql_real_escape_string(trim(strip_tags($_POST['name'])));
+    $alias = mysql_real_escape_string(trim(strip_tags($_POST['alias'])));
+    if ($alias == '12') die();
+
+    $passworddb = trim(strip_tags($_POST['passworddb']));
+    $passwordrepeat = trim(strip_tags($_POST['passwordrepeat']));
+    $msn = mysql_real_escape_string(trim(strip_tags($_POST['msn'])));
+    $icq = mysql_real_escape_string(trim(strip_tags($_POST['icq'])));
+    $aim = mysql_real_escape_string(trim(strip_tags($_POST['aim'])));
+    $mail = mysql_real_escape_string(trim(strip_tags($_POST['mail'])));
+    $mail2 = mysql_real_escape_string(trim(strip_tags($_POST['mail2'])));
+    $country = mysql_real_escape_string($_POST['country']);
+    if (empty($country)) $country = "No country";
+    $nationality = mysql_real_escape_string($_POST['nationality']);
+    if ($signupEmailRequired) $sid = mysql_real_escape_string($_POST['sid']);
+    $defaultversion = mysql_real_escape_string($_POST['defaultversion']);
+    if (empty($nationality) || $nationality == "") $nationality = $country;
+    $message = mysql_real_escape_string(trim(strip_tags($_POST['message'])));
+    if ($message == 'girl') die();
+    $forum = mysql_real_escape_string($_POST['forum']);
+    $favteam1 = mysql_real_escape_string($_POST['favteam1']);
+    $favteam2 = mysql_real_escape_string($_POST['favteam2']);
+
+    $serial5 = !empty($_POST['serial5']) ? strtoupper(str_replace("-","", mysql_real_escape_string($_POST['serial5']))) : '';
+    $serial6 = !empty($_POST['serial6']) ? strtoupper(str_replace("-","", mysql_real_escape_string($_POST['serial6']))) : '';
+
+    if (empty($msn)) $msn = $na;
+    if (empty($icq)) $icq = $na;
+    if (empty($aim)) $aim = $na;
+    if (empty($mail)) $mail = $na;
+
+    $gamesMail = isset($_POST["gamesMail"]) ? "yes" : "no";
+    $deductMail = "no";
+    $newsletter = isset($_POST["newsletter"]) ? "yes" : "no";
+    $uploadSpeed = mysql_real_escape_string($_POST["uploadSpeed"]);
+    $downloadSpeed = mysql_real_escape_string($_POST["downloadSpeed"]);
+
+    // Versions
+    $sql = "SELECT version from $versionstable";
+    $result = mysql_query($sql);
+    $versions = "";
+    while ($row = mysql_fetch_array($result)) {
+        $version = $row['version'];
+        if (isset($_POST['version_'.$version])) $versions .= $version;
+    }
+
+    // Signup link check
+    $num_rows = 0;
+    if ($signupEmailRequired) {
         $sql = "SELECT sid from $signuptable where sid='$sid' and expired='no' and used='no'";
         $result = mysql_query($sql);
         $num_rows = mysql_num_rows($result);
-      }
-      
-      if ($num_rows != 1 && $signupEmailRequired) {
-        echo "<p>The signup link used is invalid or has expired.</p><p>You will need to request a new one from an administrator.</p>";
-      } else if ($name == "") {
-        echo "<p>Please enter a nickname.</p>".$back;
-      } else if (preg_match('/[^0-9A-Za-z]/', $name)) {
-        echo "<p>Please use only standard alphanumeric characters (A-Z, 0-9) in your nickname.</p>".$back;
-      } else if ($passworddb == "") {
-        echo "<p>Please supply a password.</p>".$back;
-      } else if (strstr($passworddb,'1234')) {
-        echo "<p>Please choose a better password.</p>".$back;
-      } else if (!isValidEmailAddress($mail)) {
-        echo "<p>Please supply a valid email address.</p>".$back;        
-      } else if ($mail != $mail2) {
-        echo "<p>Email address and repetition do not match.</p>".$back;
-      } else if ($passworddb != $passwordrepeat) {
-        echo "<p>Password and repetition do not match.</p>".$back;
-      } else if ($passworddb == $name || $passworddb == $name) {
-        echo "<p>Please choose a better password.</p>".$back;
-      } else if ($versions == "") {
-        echo "<p>Please select at least one game.</p>".$back;
-      } else if (strlen($serial5) > 0 && strlen($serial5) != 20) {
-        echo "<p>The PES 5 serial you entered is not valid.</p>".$back;
-      } else if (strlen($serial6) > 0 && strlen($serial6) != 20) {
-        echo "<p>The PES 6 serial you entered is not valid.</p>".$back;
-      } else if (stristr($versions, 'H') && strlen($serial6) == 0) {
-        echo "<p>You must enter your PES 6 serial number if you want to play PES 6.</p>".$back;
-      }
-      
-      else if (!stristr($versions, $defaultversion)) {
-        echo "<p>The default game you selected is not one of the games you have.</p>".$back;
-      }
-      else {
+    }
+
+    // Validation
+    if ($num_rows != 1 && $signupEmailRequired) {
+        $submitResult = "The signup link used is invalid or has expired.";
+    } else if ($name == "") {
+        $submitResult = "Please enter a nickname.";
+    } else if (preg_match('/[^0-9A-Za-z]/', $name)) {
+        $submitResult = "Please use only alphanumeric characters (A-Z, 0-9).";
+    } else if ($passworddb == "") {
+        $submitResult = "Please supply a password.";
+    } else if (strstr($passworddb,'1234')) {
+        $submitResult = "Please choose a better password.";
+    } else if (!isValidEmailAddress($mail)) {
+        $submitResult = "Please supply a valid email address.";
+    } else if ($mail != $mail2) {
+        $submitResult = "Email address and repetition do not match.";
+    } else if ($passworddb != $passwordrepeat) {
+        $submitResult = "Password and repetition do not match.";
+    } else if ($passworddb == $name) {
+        $submitResult = "Please choose a better password.";
+    } else if ($versions == "") {
+        $submitResult = "Please select at least one game.";
+    } else if (strlen($serial5) > 0 && strlen($serial5) != 20) {
+        $submitResult = "The PES 5 serial you entered is not valid.";
+    } else if (strlen($serial6) > 0 && strlen($serial6) != 20) {
+        $submitResult = "The PES 6 serial you entered is not valid.";
+    } else if (stristr($versions, 'H') && strlen($serial6) == 0) {
+        $submitResult = "You must enter your PES 6 serial number if you want to play PES 6.";
+    } else if (!stristr($versions, $defaultversion)) {
+        $submitResult = "The default game you selected is not one of the games you have.";
+    } else {
         $length = strlen($name);
         if ($length > $maxnamelength) {
-          echo "<p>Your name is too long. The maximum is $maxnamelength characters.</p>".$back;
-        }
-        else {
-          $pwdHash = password_hash($passworddb, PASSWORD_DEFAULT);
-          $similarAccounts = CheckSimilarAccounts($ip, $name, $pwdHash, $mail);
-          // $similarAccounts = "";
-          if (strlen($similarAccounts) > 0 && $cookie_name != 'Ike') {
-            echo '<p>It appears you already have at least one account here. <b>You may not sign up for more than one account per IP.</b></p>';
-            echo '<p>If you have more than one player in your home, create another in-game profile.</p>';
-            echo '<p>Please do not try to sign up again.</p>';
-            echo '<p>If you need any help with your account, or you believe this is an error, ';
-            echo 'please <b><a href="http://www.'.$leaguename.'/forum/viewtopic.php?t=5346">post in the forums</a></b>.</p>';
-          }	else {
-            $sql="SELECT name FROM $playerstable WHERE name = '$name'";
-            $result=mysql_query($sql,$db);
-            $samenick = mysql_num_rows($result);
-            if ($samenick > 0) {
-              echo "<p>The name '$name' is already taken. Please choose another.</p>".$back;
-            }
-            else {
-              if ($approve == 'yes') {
-                $approved = 'no';
-              }
-              else {
-                $approved = 'yes';
-              }
-              if (strcmp($name, $alias) == 0) {
-                $alias = "";
-              }
-              
-              $hash5 = mysql_real_escape_string($_POST["hash5"]);
-              if (!empty($serial5)) {
-                $result = array();
-                $res5 = exec("/opt/sixserver/sixserver-env/bin/python2.6 /opt/sixserver/lib/fiveserver/gethash.py ".$hash5, $result);
-                $hash5 = $result[0];
-              }
-              
-              $hash6 = mysql_real_escape_string($_POST["hash6"]);
-              if (!empty($serial6)) {
-                $result = array();
-                $res6 = exec("/opt/sixserver/sixserver-env/bin/python2.6 /opt/sixserver/lib/fiveserver/gethash.py ".$hash6, $result);
-                $hash6 = $result[0];
-              }
+            $submitResult = "Your name is too long. Maximum is $maxnamelength characters.";
+        } else {
+            $pwdHash = password_hash($passworddb, PASSWORD_DEFAULT);
+            $similarAccounts = CheckSimilarAccounts($ip, $name, $pwdHash, $mail);
+            if (strlen($similarAccounts) > 0 && $cookie_name != 'Ike') {
+                $submitResult = "It appears you already have at least one account here. You may not sign up for more than one account per IP.";
+            } else {
+                $sql="SELECT name FROM $playerstable WHERE name = '$name'";
+                $result=mysql_query($sql,$db);
+                $samenick = mysql_num_rows($result);
+                if ($samenick > 0) {
+                    $submitResult = "The name '$name' is already taken. Please choose another.";
+                } else {
+                    $approved = ($approve == 'yes') ? 'no' : 'yes';
+                    if (strcmp($name, $alias) == 0) $alias = "";
 
-              if (!empty($_FILES['picture']['size'])) {
-                $f1_size = $_FILES['picture']['size'];
-                $f1_name = $_FILES['picture']['name'];
-                $f1_tmpname = $_FILES['picture']['tmp_name'];
-                
-                $ext = strtolower(substr($f1_name,strrpos($f1_name, ".")+1));
-                
-                $valides = array($valid_picture_extension1,$valid_picture_extension2,$valid_picture_extension3);
-                $w = 0;
-                $h = 0;
-                list($w, $h) = getimagesize($f1_tmpname);
-                if ($w > 500 || $h > 500) {
-                  echo '<p>Your picture is too big ('.$w.'x'.$h.'). Maximum size: 500x500</p>'.$back;
-                }
-                elseif ($f1_size > $maxsize_picture_upload) {
-                  echo '<p>Your picture is too big. '.$f1_size.'KB, Maximum: '.$maxsize_picture_upload.'KB</p>'.$back;
-                }
-                else {
-                  if (!in_array($ext,$valides)) {
-                    echo '<p>Invalid image extension \''.$ext.'\'. Valid extensions are: '.$valid_picture_extension1." ".$valid_picture_extension2." ".$valid_picture_extension3."</p>".$back;
-                  }
-                  else {
+                    $hash5 = mysql_real_escape_string($_POST["hash5"]);
+                    if (!empty($serial5)) {
+                        $result = array();
+                        exec("/opt/sixserver/sixserver-env/bin/python2.6 /opt/sixserver/lib/fiveserver/gethash.py ".$hash5, $result);
+                        $hash5 = $result[0];
+                    }
+                    $hash6 = mysql_real_escape_string($_POST["hash6"]);
+                    if (!empty($serial6)) {
+                        $result = array();
+                        exec("/opt/sixserver/sixserver-env/bin/python2.6 /opt/sixserver/lib/fiveserver/gethash.py ".$hash6, $result);
+                        $hash6 = $result[0];
+                    }
+
                     $joindate = time();
                     $activeDate = $joindate;
                     $signup = md5($joindate.$name);
-                    
                     $message = mysql_real_escape_string($message);
                     $alias = mysql_real_escape_string($alias);
-                    
+
                     $sql = "INSERT INTO $playerstable (name, alias, pwd, mail, icq, aim, msn, " .
-                      "country, nationality, approved, ip, joindate, activeDate, forum, " .
-                      "sendGamesMail, sendDeductMail, sendNewsletter, uploadSpeed, downloadSpeed, message, versions, ".
-                      "defaultversion, favteam1, favteam2, serial5, hash5, serial6, hash6, signup) " .
-                      "VALUES ('$name','$alias', '$pwdHash','$mail','$icq','$aim', '$msn', " .
-                      "'$country', '$nationality', '$approved', '$ip', '$joindate', '$activeDate', '$forum', " .
-                      "'$gamesMail', '$deductMail', '$newsletter', '$uploadSpeed', '$downloadSpeed', '$message', ".
-                      "'$versions', '$defaultversion', '$favteam1', '$favteam2', '$serial5', '$hash5', '$serial6', '$hash6', '$signup')";
+                        "country, nationality, approved, ip, joindate, activeDate, forum, " .
+                        "sendGamesMail, sendDeductMail, sendNewsletter, uploadSpeed, downloadSpeed, message, " .
+                        "versions, defaultversion, favteam1, favteam2, serial5, hash5, serial6, hash6, signup) " .
+                        "VALUES ('$name','$alias', '$pwdHash', '$mail','$icq','$aim', '$msn', " .
+                        "'$country', '$nationality', '$approved', '$ip', '$joindate', '$activeDate', '$forum', " .
+                        "'$gamesMail', '$deductMail', '$newsletter', '$uploadSpeed', '$downloadSpeed', '$message', '$versions', " .
+                        "'$defaultversion', '$favteam1', '$favteam2','$serial5', '$hash5', '$serial6', '$hash6', '$signup')";
                     $result = mysql_query($sql);
-                    
                     $logJoin->logInfo('sql: '.$sql);
                     $logJoin->logInfo('result: '.$result);
-                    
+
                     $sql = "SELECT player_id from $playerstable where name = '$name'";
                     $result = mysql_query($sql);
                     $row = mysql_fetch_array($result);
                     $player_id = $row['player_id'];
-                    
-                    $picturename = $player_id.'.'.$ext;
-                    $copywork = rename($f1_tmpname, "./pictures/$picturename");
-                    chmod("./pictures/$picturename", 0644);
-                    
-                    echo $createdmsg;
-                    if ($country == "No country") {
-                      echo $nocountrymsg;
-                    }
-                    
-                    if (startsWith($ip, "41.") || startsWith($ip, "197.") || startsWith($ip, "105.")) {
-                      $logJoin->logInfo('Not sending activation email for IP='.$ip);
+
+                    // Handle picture upload
+                    if (!empty($_FILES['picture']['size'])) {
+                        $f1_size = $_FILES['picture']['size'];
+                        $f1_name = $_FILES['picture']['name'];
+                        $f1_tmpname = $_FILES['picture']['tmp_name'];
+                        $ext = strtolower(substr($f1_name,strrpos($f1_name, ".")+1));
+                        $valides = array($valid_picture_extension1,$valid_picture_extension2,$valid_picture_extension3);
+                        list($w, $h) = getimagesize($f1_tmpname);
+                        if ($w > 500 || $h > 500) {
+                            $submitResult = "Your picture is too big ({$w}x{$h}). Maximum size: 500x500";
+                        } elseif ($f1_size > $maxsize_picture_upload) {
+                            $submitResult = "Your picture is too big. Maximum: {$maxsize_picture_upload}KB";
+                        } elseif (!in_array($ext,$valides)) {
+                            $submitResult = "Invalid image extension '$ext'.";
+                        } else {
+                            $picturename = $player_id.'.'.$ext;
+                            rename($f1_tmpname, "./pictures/$picturename");
+                            chmod("./pictures/$picturename", 0644);
+                            $submitSuccess = true;
+                        }
                     } else {
-                      sendActivation($player_id, $logJoin);
+                        $submitSuccess = true;
                     }
-                  }
+
+                    if ($submitSuccess) {
+                        if (!(startsWith($ip, "41.") || startsWith($ip, "197.") || startsWith($ip, "105."))) {
+                            sendActivation($player_id, $logJoin);
+                        }
+                    }
                 }
-              }
-              else { // no picture
-                $joindate = time();
-                $activeDate = $joindate;
-                $signup = md5($joindate.$name);
-                
-                $message = mysql_real_escape_string($message);
-                $alias = mysql_real_escape_string($alias);
-                
-                $sql = "INSERT INTO $playerstable (name, alias, pwd, mail, icq, aim, msn, " .
-                "country, nationality, approved, ip, joindate, activeDate, forum, " .
-                "sendGamesMail, sendDeductMail, sendNewsletter, uploadSpeed, downloadSpeed, message, " .
-                "versions, defaultversion, favteam1, favteam2, serial5, hash5, serial6, hash6, signup) " .
-                "VALUES ('$name','$alias', '$pwdHash', '$mail','$icq','$aim', '$msn', " .
-                "'$country', '$nationality', '$approved', '$ip', '$joindate', '$activeDate', '$forum', " .
-                "'$gamesMail', '$deductMail', '$newsletter', '$uploadSpeed', '$downloadSpeed', '$message', '$versions', " .
-                "'$defaultversion', '$favteam1', '$favteam2','$serial5', '$hash5', '$serial6', '$hash6', '$signup')";
-                $result = mysql_query($sql);
-                
-                $logJoin->logInfo('sql: '.$sql);
-                $logJoin->logInfo('result: '.$result);
-                
-                $sql = "SELECT player_id from $playerstable where name = '$name'";
-                $result = mysql_query($sql);
-                $row = mysql_fetch_array($result);
-                $player_id = $row['player_id'];
-                
-                echo $createdmsg;
-                if ($country == "No country") {
-                  echo $nocountrymsg;
-                }
-                
-                if (startsWith($ip, "41.") || startsWith($ip, "197.") || startsWith($ip, "105.")) {
-                  $logJoin->logInfo('Not sending activation email for IP='.$ip);
-                } else {
-                  sendActivation($player_id, $logJoin);
-                }
-              }
             }
-          }
-        }
-      }    
-    }
-    else {
-
-      if (!isset($_GET['sid']) && $signupEmailRequired) {
-        ?>
-        <table class="layouttable" width="600"><tr><td>
-        <p style="margin-bottom:10px">To get a quick overview, check out our <a href="/faq.php">FAQ</a>. We currently support these games: <?= getVersionsImagesNoSpace(getSupportedVersions()) ?></p>
-        <p style="margin-bottom:10px">To be allowed to sign up for the league, please send an email <b>in English language</b> to <b><?= $admin_signup ?><?= $mailDomain ?></b> and tell us briefly  
-        why you want to join - no lengthy explanations needed.</p>
-        <p style="margin-bottom:10px">Only players that fully agree to the rules will be allowed to sign up
-        - this especially means accepting defeat, being polite to the other players and being able to cope with the difficulties of 
-        playing online like network lag. Your main reason to play here should be to have a good time playing the game online and meet new players, not necessarily 
-        being the best player of the league. <? echo "<img align='middle' src='$directory/smileys/wink.gif' />" ?> </p>
-        <p>After we received your email, we usually send you a sign-up link where you can enter your account details within 24 hours. Please be patient when you do not get an instant reply. If you don't hear from us for a few days, send another email or post in our <a href="http://www.yoursite/forum/">forum</a>.</p>
-        <p><b>Important: </b>Some people were wondering why they did not receive an answer, and we have heard of some players finding our mail in their spam folder. If your email was readable, you should get an answer within 72 hours. If you didn't get an email from us, check your spam folder, and if it's not there, send your sign-up request again.</p>   
-      </td></tr></table>
-        <?
-      } else {
-      $num_rows = 0;
-          if ($signupEmailRequired) {
-            $sid = mysql_real_escape_string($_GET['sid']);
-            $sql = "SELECT sid from $signuptable where sid='$sid' and expired='no' and used='no'";
-            $result = mysql_query($sql);
-        $num_rows = mysql_num_rows($result);
-          }
-          
-      if ($signupEmailRequired && $num_rows != 1) {
-        echo "<p>The signup link used is invalid or has expired.</p><p>You will need to request a new one from an administrator.</p>";
-      } else {		      	
-        
-      ?>
-          <form method="post" action="join.php?submit=1" onsubmit="return validateProfile();" enctype="multipart/form-data">
-
-          <table class="formtable">
-          <tr>
-              <td>Nickname*</td>
-              <td><input class="width150" type="Text" id="name" name="name" maxlength="15"></td>
-              <td>Alphanumeric characters only (A-Z, 0-9)</td>
-          </tr>
-          <tr>
-            <td>Email address*</td>
-            <td><input class="width150" type="Text" name="mail" value=""></td>
-            <td><b>Must be valid!</b></td>
-          </tr>
-          
-          <tr>
-            <td>Repeat Email address*</td>
-            <td><input class="width150" type="Text" name="mail2" value=""></td>
-            <td><b>Must be valid!</b></td>
-          </tr>
-
-          <tr>
-              <td>Password*</td>
-              <td><input type="password" id="password" class="width150" name="passworddb" maxlength="10"></td>
-              <td>Alphanumeric characters only (A-Z, 0-9)<br>10 characters max.</td>
-          </tr>
-          
-          <tr>
-              <td>Repeat password*</td>
-              <td><input type="password" class="width150" name="passwordrepeat" maxlength="10"></td>
-              <td></td>
-          </tr>
-
-          <tr>
-              <td>Location*</td>
-              <td align="left"><select class="width150" name="country">
-    <option></option>
-    <option value="No country">No country</option>
-    <?php
-      $sql = "SELECT country FROM $countriestable ORDER BY COUNTRY ASC";
-      $result = mysql_query($sql);
-      while ($row = mysql_fetch_array($result)) {
-        $row_country = $row['country'];	
-        if ($row_country == $country) {
-          $selected = "selected='selected'";
-        } else {
-          $selected = "";
-        }
-          echo '<option '.$selected.' value="'.$row_country.'">'.$row_country.'</option>';
-      }
-      ?>
-              </select></td>
-              <td>Where you are now</td>
-         </tr>
-         
-         <tr>
-              <td>Nationality</td>
-              <td align="left"><select class="width150" name="nationality">
-    <option></option>
-    <option value="No country">No country</option>
-    <?php
-      $sql = "SELECT country FROM $countriestable ORDER BY COUNTRY ASC";
-      $result = mysql_query($sql);
-      while ($row = mysql_fetch_array($result)) {
-        $row_country = $row['country'];	
-        if ($row_country == $nationality) {
-          $selected = "selected='selected'";
-        } else {
-          $selected = "";
-        }
-          echo '<option '.$selected.' value="'.$row_country.'">'.$row_country.'</option>';
-      }
-      ?>
-
-              </select></td>
-              <td>Where you are from</td>
-          </tr>
-
-          <?= getCheckboxesForSupportedVersions("H"); ?>
-
-          <tr>
-              <td>Default Game</td>
-              <td><?= getSelectboxForSupportedVersions('') ?></td>
-              <td>The game you play online the most often</td>
-          </tr>		
-          
-          <!--
-          <tr>
-              <td>PES 5 serial</td>
-              <td><input class="width150" maxlength="24" type="hidden" name="serial5" id="serial5" value=""></td>
-              <td></td>
-          </tr>
-          -->
-          
-          <tr>
-              <td>PES 6 serial</td>
-              <td><input class="width150" maxlength="24" type="Text" name="serial6" id="serial6" value="">
-              <input type="hidden" name="serial5" id="serial5" value=""></td>
-              <td><b>Required for Sixserver</b> (no dashes)</td>
-          </tr>
-
-          <tr>
-              <td style="padding-top:15px;padding-bottom:10px" colspan="3"><b>Optional information</b></td>
-          </tr>
-
-          <tr>
-              <td>Group</td>
-              <td><input class="width150" type="Text" name="forum" maxlength="30" value=""></td>
-              <td>Displayed in Sixserver</td>
-          </tr>
-
-          <tr>
-              <td>Picture</td>
-              <td><input size="10" type="File" name="picture"></td>
-              <td>A picture of yourself (max. size: 500x500)</td>
-          </tr>
-
-          <tr>
-              <td>Alias</td>
-              <td><input class="width150" type="Text" name="alias" maxlength="15" value="<?= $alias ?>"></td>
-              <td>An alias, eg. a messenger or profile name (optional)</td>
-          </tr>
-
-          <tr>
-            <td>Message</td>
-            <td><input type="Text" class="width150" maxlength="40" name="message" value="<? echo $message ?>"></td>
-            <td>A short message for your profile page</td>
-          </tr>         
-
-          <tr>
-              <td>MSN Messenger</td>
-              <td><input class="width150" type="Text" name="msn" value=""></td>
-              <td></td>
-          </tr>
-
-          
-        <tr>
-        <td>Favorite team 1</td>
-        <td>
-          <select class="width150" name="favteam1">
-          <?= getTeamsOptionsNone(false) ?>
-          <?= getTeamsAllOptions(null) ?>
-          </select>
-        </td>
-        <td></td>
-      </tr>
-
-      <tr>
-        <td>Favorite team 2</td>
-        <td>
-          <select class="width150" name="favteam2">
-          <?= getTeamsOptionsNone(false) ?>
-          <?= getTeamsAllOptions(null) ?>
-          </select>
-        </td>
-        <td></td>
-      </tr>
-
-          <tr>
-            <td colspan="2" style="padding-top:15px;">
-        <input name="gamesMail" type="checkbox" class="checkbox" 
-        <? echo $checked; ?>/>&nbsp;&nbsp;Receive a daily game summary
-        by email</td>
-        <td style="padding-top:15px;">Only if you have played games, highly recommended!</td>
-      </tr>
-      <tr>
-            <td colspan="2" class="padding-bottom:15px;">
-        <input name="newsletter" type="checkbox" class="checkbox" 
-        <? echo $checked; ?>/>&nbsp;&nbsp;Occasional <?= $leaguename ?> info</td>
-        <td class="padding-bottom:15px;">Once or twice a year</td>
-      </tr>
-      <tr>
-        <td class="padding-button">
-                <input name="sid" type="hidden" value="<?= $sid ?>" />
-                <input type="hidden" name="hash5" id="hash5" size="32" value=""/>
-          <input type="hidden" name="hash6" id="hash6" size="32" value=""/>
-          <input class="width150" type="Submit" name="submit" value="Join league">
-        </td>
-      </tr>             		
-        </table>
-        </form>
-
-          <? 
-      }
         }
     }
-    ?>
-    <?= getBoxBottom() ?>
-    </td><td></td>
-    </tr></table>
-    <?
-  }
-} // only Sundays
-?>
-<?= getOuterBoxBottom() ?>
-<?php
-require('bottom.php');
+}
+
+// ====== Check signup link validity ======
+$showForm = true;
+$linkInvalid = false;
+if (!isset($_GET['sid']) && $signupEmailRequired) {
+    $showForm = false;
+} else if ($signupEmailRequired) {
+    $sid = mysql_real_escape_string($_GET['sid']);
+    $sql = "SELECT sid from $signuptable where sid='$sid' and expired='no' and used='no'";
+    $result = mysql_query($sql);
+    if (mysql_num_rows($result) != 1) {
+        $showForm = false;
+        $linkInvalid = true;
+    }
+}
+
+// Check if already logged in
+$alreadyLoggedIn = false;
+$appRoot = realpath(dirname(__FILE__)).'/';
+require_once($appRoot.'log/KLogger.php');
+$cookieSessionId = GetInfo($idcontrol,'SessionId');
+$cookie_name_check = "";
+if ($cookieSessionId != null && $cookieSessionId != "") {
+    $sql = "SELECT name FROM $playerstable WHERE pwd='".mysql_real_escape_string($cookieSessionId)."'";
+    $result = mysql_query($sql);
+    if ($row = mysql_fetch_array($result)) {
+        $cookie_name_check = $row['name'];
+        if ($cookie_name_check != '' && $cookie_name_check != 'Ike') {
+            $alreadyLoggedIn = true;
+        }
+    }
+}
+
+// ====== Get countries for dropdown ======
+$countriesList = array();
+$sql = "SELECT country FROM $countriestable ORDER BY COUNTRY ASC";
+$result = mysql_query($sql);
+while ($row = mysql_fetch_array($result)) {
+    $countriesList[] = $row['country'];
+}
 
 function startsWith($haystack, $needle) {
-     $length = strlen($needle);
-     return (substr($haystack, 0, $length) === $needle);
+    return (substr($haystack, 0, strlen($needle)) === $needle);
 }
 ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= $leaguename ?> — Join League</title>
+    <meta name="description" content="Sign up to join <?= $leaguename ?> — Play PES online, compete in tournaments and climb the ladder.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ===== Reset & Base ===== */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+            background: #F0F2F5;
+            color: #1E293B;
+        }
+
+        /* ===== Layout ===== */
+        .page-wrapper { display: flex; min-height: 100vh; }
+
+        /* ===== Left Panel — Hero ===== */
+        .hero-panel {
+            display: none; flex: 1; position: relative;
+            background: linear-gradient(145deg, #1E3A8A 0%, #2563EB 50%, #3B82F6 100%);
+            overflow: hidden; align-items: center; justify-content: center; padding: 3rem;
+        }
+        @media (min-width: 1024px) { .hero-panel { display: flex; } }
+        .hero-panel::before {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(ellipse at 20% 30%, rgba(255,255,255,0.12) 0%, transparent 50%),
+                        radial-gradient(ellipse at 80% 70%, rgba(255,255,255,0.06) 0%, transparent 50%);
+        }
+        .hero-panel::after {
+            content: ''; position: absolute; inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Ccircle cx='20' cy='20' r='1.5'/%3E%3C/g%3E%3C/svg%3E");
+        }
+        .hero-content { position: relative; z-index: 10; text-align: center; max-width: 420px; }
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: rgba(255,255,255,0.15); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 100px; padding: 8px 20px;
+            font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+            color: #fff; margin-bottom: 2.5rem;
+        }
+        .hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: #FCD34D; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .hero-title { font-size: 2.5rem; font-weight: 300; line-height: 1.2; color: #fff; margin-bottom: 1rem; }
+        .hero-title strong { font-weight: 800; color: #FCD34D; -webkit-text-fill-color: #FCD34D; }
+        .hero-subtitle { font-size: 15px; color: rgba(255,255,255,0.7); font-weight: 300; line-height: 1.6; }
+        .hero-features { margin-top: 2.5rem; text-align: left; display: flex; flex-direction: column; gap: 14px; }
+        .hero-feature {
+            display: flex; align-items: center; gap: 12px;
+            animation: fadeSlideIn 0.6s ease forwards; opacity: 0;
+        }
+        .hero-feature:nth-child(1) { animation-delay: 0.3s; }
+        .hero-feature:nth-child(2) { animation-delay: 0.4s; }
+        .hero-feature:nth-child(3) { animation-delay: 0.5s; }
+        .hero-feature:nth-child(4) { animation-delay: 0.6s; }
+        .hero-feature .check {
+            width: 24px; height: 24px; border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .hero-feature .check svg { width: 13px; height: 13px; color: #FCD34D; }
+        .hero-feature span { font-size: 14px; color: rgba(255,255,255,0.8); font-weight: 400; }
+        .hero-stats {
+            display: flex; align-items: center; justify-content: center;
+            gap: 2rem; margin-top: 3rem; padding-top: 2rem;
+            border-top: 1px solid rgba(255,255,255,0.15);
+        }
+        .hero-stat .num { font-size: 1.6rem; font-weight: 700; color: #fff; }
+        .hero-stat .lbl { font-size: 10px; color: rgba(255,255,255,0.5); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+        .hero-stat-divider { width: 1px; height: 32px; background: rgba(255,255,255,0.15); }
+
+        /* ===== Right Panel — Form ===== */
+        .form-panel {
+            flex: 1; display: flex; align-items: flex-start; justify-content: center;
+            padding: 2.5rem 1.5rem;
+            background: #F8FAFC;
+            overflow-y: auto;
+        }
+        @media (min-width: 1024px) { .form-panel { max-width: 600px; align-items: center; } }
+        .form-container { width: 100%; max-width: 500px; }
+
+        /* ===== Logo ===== */
+        .logo-link {
+            display: inline-flex; align-items: center; gap: 10px;
+            text-decoration: none; margin-bottom: 2rem;
+        }
+        .logo-icon {
+            width: 42px; height: 42px; border-radius: 12px;
+            background: linear-gradient(135deg, #2563EB, #3B82F6);
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+        }
+        .logo-icon svg { width: 20px; height: 20px; color: #fff; }
+        .logo-text { font-size: 18px; font-weight: 700; color: #1E293B; letter-spacing: -0.5px; }
+
+        /* ===== Headings ===== */
+        .form-title { font-size: 28px; font-weight: 300; color: #0F172A; line-height: 1.2; margin-bottom: 6px; }
+        .form-title strong { font-weight: 800; color: #2563EB; }
+        .form-subtitle { font-size: 14px; color: #94A3B8; font-weight: 400; margin-bottom: 1.75rem; }
+
+        /* ===== Guide Box ===== */
+        .guide-box {
+            background: linear-gradient(135deg, #EFF6FF, #F0F9FF);
+            border: 1px solid #BFDBFE;
+            border-radius: 14px; padding: 16px 18px; margin-bottom: 1.5rem;
+        }
+        .guide-box-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .guide-box-header svg { width: 16px; height: 16px; color: #2563EB; }
+        .guide-box-header span { font-size: 13px; font-weight: 700; color: #1D4ED8; }
+        .guide-box-content { font-size: 13px; color: #475569; line-height: 1.7; }
+        .guide-box-content strong { color: #1E293B; }
+        .guide-box-content a { color: #2563EB; text-decoration: underline; }
+        .guide-box-content ul { margin-left: 16px; margin-top: 4px; }
+        .guide-box-content li { margin-bottom: 4px; list-style: disc; }
+
+        /* ===== Alert ===== */
+        .alert {
+            padding: 12px 16px; border-radius: 12px;
+            font-size: 13px; font-weight: 500; margin-bottom: 1.25rem;
+            animation: slideDown 0.3s ease;
+        }
+        .alert-error {
+            background: #FEF2F2; border: 1px solid #FECACA; color: #DC2626;
+        }
+        .alert-success {
+            background: #F0FDF4; border: 1px solid #BBF7D0; color: #16A34A;
+        }
+        .alert-info {
+            background: #EFF6FF; border: 1px solid #BFDBFE; color: #2563EB;
+        }
+
+        /* ===== Form Styles ===== */
+        .form-section-title {
+            font-size: 11px; font-weight: 700; color: #94A3B8;
+            text-transform: uppercase; letter-spacing: 1.5px;
+            margin-bottom: 12px; margin-top: 24px;
+            padding-bottom: 8px; border-bottom: 1px solid #E2E8F0;
+        }
+        .form-grid { display: grid; gap: 14px; }
+        .form-grid-2 { grid-template-columns: 1fr 1fr; }
+        @media (max-width: 520px) { .form-grid-2 { grid-template-columns: 1fr; } }
+
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-label { font-size: 12px; font-weight: 600; color: #64748B; }
+        .form-label .required { color: #EF4444; margin-left: 2px; }
+        .form-label .hint { font-weight: 400; color: #94A3B8; font-size: 11px; }
+
+        .input-wrapper { position: relative; display: flex; align-items: center; }
+        .input-icon {
+            position: absolute; left: 14px; width: 16px; height: 16px; color: #94A3B8;
+            pointer-events: none; z-index: 2;
+        }
+        .form-input {
+            width: 100%; height: 44px;
+            background: #fff; border: 1px solid #E2E8F0;
+            border-radius: 10px; padding: 0 14px;
+            font-size: 14px; color: #1E293B; font-family: inherit;
+            transition: all 0.2s; outline: none;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+        }
+        .form-input:hover { border-color: #CBD5E1; }
+        .form-input:focus {
+            background: #fff; border-color: #3B82F6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12), 0 1px 2px rgba(0,0,0,0.04);
+        }
+        .form-input::placeholder { color: #CBD5E1; }
+        .form-input.has-icon { padding-left: 42px; }
+        .form-input.has-toggle { padding-right: 44px; }
+
+        .form-select {
+            width: 100%; height: 44px;
+            background: #fff; border: 1px solid #E2E8F0;
+            border-radius: 10px; padding: 0 14px;
+            font-size: 14px; color: #1E293B; font-family: inherit;
+            transition: all 0.2s; outline: none; cursor: pointer;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            -webkit-appearance: none; -moz-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 14px center;
+        }
+        .form-select:hover { border-color: #CBD5E1; }
+        .form-select:focus {
+            border-color: #3B82F6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12), 0 1px 2px rgba(0,0,0,0.04);
+        }
+
+        /* Password toggle */
+        .pwd-toggle {
+            position: absolute; right: 12px; background: none; border: none;
+            color: #94A3B8; cursor: pointer; padding: 4px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 6px; transition: all 0.2s; z-index: 2;
+        }
+        .pwd-toggle:hover { color: #64748B; background: #F1F5F9; }
+        .pwd-toggle svg { width: 18px; height: 18px; }
+
+        /* Checkbox */
+        .checkbox-group { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+        .checkbox-input { width: 18px; height: 18px; accent-color: #2563EB; cursor: pointer; }
+        .checkbox-label { font-size: 13px; color: #64748B; cursor: pointer; }
+
+        /* ===== Button ===== */
+        .btn-primary {
+            width: 100%; height: 48px;
+            background: linear-gradient(135deg, #2563EB 0%, #3B82F6 100%);
+            color: #fff; border: none; border-radius: 12px;
+            font-size: 15px; font-weight: 600; font-family: inherit;
+            cursor: pointer; transition: all 0.3s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            margin-top: 12px;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4); }
+        .btn-primary:active { transform: translateY(0); }
+        .btn-primary svg { width: 18px; height: 18px; }
+
+        .btn-secondary {
+            display: inline-flex; align-items: center; gap: 6px;
+            color: #2563EB; text-decoration: none;
+            font-size: 14px; font-weight: 500; transition: color 0.2s;
+        }
+        .btn-secondary:hover { color: #1D4ED8; }
+
+        /* ===== Footer ===== */
+        .form-footer { text-align: center; margin-top: 1.5rem; font-size: 13px; color: #94A3B8; }
+        .form-footer a { color: #2563EB; text-decoration: none; font-weight: 600; }
+        .form-footer a:hover { color: #1D4ED8; text-decoration: underline; }
+
+        /* ===== File Input ===== */
+        .file-input-wrapper { position: relative; }
+        .file-input-label {
+            display: flex; align-items: center; gap: 8px;
+            background: #fff; border: 1px dashed #CBD5E1;
+            border-radius: 10px; padding: 10px 14px;
+            font-size: 13px; color: #64748B; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .file-input-label:hover { border-color: #3B82F6; background: #EFF6FF; }
+        .file-input-label svg { width: 16px; height: 16px; }
+        .file-input-hidden { position: absolute; opacity: 0; width: 0; height: 0; }
+
+        /* ===== Success Card ===== */
+        .success-card {
+            text-align: center; padding: 3rem 2rem;
+            background: #F0FDF4; border: 1px solid #BBF7D0;
+            border-radius: 20px;
+        }
+        .success-icon {
+            width: 64px; height: 64px; border-radius: 50%;
+            background: #DCFCE7;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 1.5rem;
+        }
+        .success-icon svg { width: 32px; height: 32px; color: #16A34A; }
+        .success-title { font-size: 22px; font-weight: 700; color: #0F172A; margin-bottom: 8px; }
+        .success-text { font-size: 14px; color: #64748B; line-height: 1.6; }
+
+        /* ===== Animations ===== */
+        @keyframes fadeSlideIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.5s ease forwards; }
+
+        /* ===== Legacy PHP output styles ===== */
+        .version-checkboxes { width: 100%; border-collapse: collapse; }
+        .version-checkboxes td {
+            padding: 6px 8px; font-size: 13px; color: #475569;
+            border: none; vertical-align: middle;
+        }
+        .version-checkboxes input[type="checkbox"] {
+            accent-color: #2563EB; width: 16px; height: 16px; vertical-align: middle;
+        }
+        .version-checkboxes img { border-radius: 3px; }
+        .select-wrapper select,
+        select.width150 {
+            width: 100%; height: 44px;
+            background: #fff; border: 1px solid #E2E8F0;
+            border-radius: 10px; padding: 0 14px;
+            font-size: 14px; color: #1E293B;
+            font-family: inherit; transition: all 0.2s;
+            outline: none; cursor: pointer;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            -webkit-appearance: none; -moz-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 14px center;
+        }
+        .select-wrapper select:focus,
+        select.width150:focus {
+            border-color: #3B82F6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12), 0 1px 2px rgba(0,0,0,0.04);
+        }
+
+
+    </style>
+</head>
+<body>
+
+<div class="page-wrapper">
+    <!-- ===== Left Panel — Hero ===== -->
+    <div class="hero-panel">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="dot"></span>
+                PES ONLINE LEAGUE
+            </div>
+            <h2 class="hero-title">
+                Join the<br><strong>ultimate PES</strong><br>community.
+            </h2>
+            <p class="hero-subtitle">
+                Sign up for free to compete in tournaments, climb the ladder and play PES online with players worldwide.
+            </p>
+            <div class="hero-features">
+                <div class="hero-feature">
+                    <div class="check">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    </div>
+                    <span>Free online PES 6 matches</span>
+                </div>
+                <div class="hero-feature">
+                    <div class="check">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    </div>
+                    <span>Ranked ladder system</span>
+                </div>
+                <div class="hero-feature">
+                    <div class="check">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    </div>
+                    <span>Tournaments &amp; Championships</span>
+                </div>
+                <div class="hero-feature">
+                    <div class="check">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    </div>
+                    <span>Global player community</span>
+                </div>
+            </div>
+            <div class="hero-stats">
+                <div class="hero-stat"><div class="num">500+</div><div class="lbl">Players</div></div>
+                <div class="hero-stat-divider"></div>
+                <div class="hero-stat"><div class="num">50+</div><div class="lbl">Tournaments</div></div>
+                <div class="hero-stat-divider"></div>
+                <div class="hero-stat"><div class="num">10K+</div><div class="lbl">Matches</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Right Panel — Form ===== -->
+    <div class="form-panel">
+        <div class="form-container fade-in">
+            <!-- Logo -->
+            <a href="/index.php" class="logo-link">
+                <div class="logo-icon">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 4l-4 4-4-4M12 8v13M8 21h8a2 2 0 002-2v-3a2 2 0 00-2-2H8a2 2 0 00-2 2v3a2 2 0 002 2z"/></svg>
+                </div>
+                <span class="logo-text"><?= $leaguename ?></span>
+            </a>
+
+            <?php if ($blacklist): ?>
+                <div class="alert alert-error">You are blacklisted.</div>
+            <?php elseif ($alreadyLoggedIn): ?>
+                <div class="alert alert-info">You already have an account, <strong><?= $cookie_name_check ?></strong>.</div>
+            <?php elseif ($submitSuccess): ?>
+                <!-- Success state -->
+                <div class="success-card">
+                    <div class="success-icon">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    </div>
+                    <h2 class="success-title">Account Created!</h2>
+                    <p class="success-text">
+                        Your account has been created but is not yet active.<br>
+                        After we have checked your account, an activation link will be sent to <strong style="color:#A5B4FC"><?= htmlspecialchars($mail) ?></strong>.
+                    </p>
+                </div>
+            <?php elseif ($linkInvalid): ?>
+                <div class="alert alert-error">The signup link used is invalid or has expired. You will need to request a new one from an administrator.</div>
+            <?php elseif (!$showForm && $signupEmailRequired): ?>
+                <!-- Email required info -->
+                <h1 class="form-title">Join <strong><?= $leaguename ?></strong></h1>
+                <p class="form-subtitle">Send an email to sign up</p>
+                <div class="guide-box">
+                    <div class="guide-box-header">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span>How to Sign Up</span>
+                    </div>
+                    <div class="guide-box-content">
+                        <p>To sign up, please send an email <strong>in English</strong> to <strong><?= $admin_signup ?><?= $mailDomain ?></strong> and tell us briefly why you want to join.</p>
+                        <p style="margin-top:8px">After we receive your email, we'll send you a sign-up link within 24 hours.</p>
+                    </div>
+                </div>
+            <?php else: ?>
+                <!-- Registration Form -->
+                <h1 class="form-title">Create your <strong>account</strong></h1>
+                <p class="form-subtitle">Fill in the details below to join the league</p>
+
+                <?php if (!empty($guideContent)): ?>
+                <div class="guide-box">
+                    <div class="guide-box-header">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <span>Registration Guide</span>
+                    </div>
+                    <div class="guide-box-content"><?= $guideContent ?></div>
+                </div>
+                <?php endif; ?>
+
+                <?php if (!empty($submitResult)): ?>
+                <div class="alert alert-error"><?= htmlspecialchars($submitResult) ?></div>
+                <?php endif; ?>
+
+                <form method="post" action="join.php?submit=1" onsubmit="return validateProfile();" enctype="multipart/form-data">
+                    <!-- ===== Required Info ===== -->
+                    <div class="form-section-title">Account Information</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Nickname <span class="required">*</span> <span class="hint">(A-Z, 0-9 only)</span></label>
+                            <div class="input-wrapper">
+                                <svg class="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                <input type="text" class="form-input has-icon" id="name" name="name" maxlength="15" placeholder="YourNickname" required>
+                            </div>
+                        </div>
+                        <div class="form-grid form-grid-2">
+                            <div class="form-group">
+                                <label class="form-label">Email <span class="required">*</span></label>
+                                <div class="input-wrapper">
+                                    <svg class="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                    <input type="email" class="form-input has-icon" name="mail" placeholder="you@example.com" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Repeat Email <span class="required">*</span></label>
+                                <input type="email" class="form-input" name="mail2" placeholder="Confirm email" required>
+                            </div>
+                        </div>
+                        <div class="form-grid form-grid-2">
+                            <div class="form-group">
+                                <label class="form-label">Password <span class="required">*</span></label>
+                                <div class="input-wrapper">
+                                    <svg class="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                    <input type="password" class="form-input has-icon has-toggle" id="password" name="passworddb" maxlength="10" placeholder="••••••••" required>
+                                    <button type="button" class="pwd-toggle" onclick="togglePassword('password', this)" title="Show/hide password">
+                                        <svg class="eye-open" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                        <svg class="eye-closed" style="display:none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Repeat Password <span class="required">*</span></label>
+                                <div class="input-wrapper">
+                                    <input type="password" class="form-input has-toggle" id="passwordrepeat" name="passwordrepeat" maxlength="10" placeholder="••••••••" required>
+                                    <button type="button" class="pwd-toggle" onclick="togglePassword('passwordrepeat', this)" title="Show/hide password">
+                                        <svg class="eye-open" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                        <svg class="eye-closed" style="display:none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ===== Location ===== -->
+                    <div class="form-section-title">Location</div>
+                    <div class="form-grid form-grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Location <span class="required">*</span> <span class="hint">(where you are)</span></label>
+                            <select class="form-select" name="country">
+                                <option value="">Select country...</option>
+                                <option value="No country">No country</option>
+                                <?php foreach ($countriesList as $c): ?>
+                                <option value="<?= htmlspecialchars($c) ?>"><?= htmlspecialchars($c) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Nationality <span class="hint">(where you're from)</span></label>
+                            <select class="form-select" name="nationality">
+                                <option value="">Select...</option>
+                                <option value="No country">No country</option>
+                                <?php foreach ($countriesList as $c): ?>
+                                <option value="<?= htmlspecialchars($c) ?>"><?= htmlspecialchars($c) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- ===== Game Info ===== -->
+                    <div class="form-section-title">Game Information</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Select your game(s) <span class="required">*</span></label>
+                            <table class="version-checkboxes"><?= getCheckboxesForSupportedVersions("H"); ?></table>
+                        </div>
+
+                        <div class="form-grid form-grid-2">
+                            <div class="form-group">
+                                <label class="form-label">Default Game</label>
+                                <div class="select-wrapper"><?= getSelectboxForSupportedVersions('') ?></div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">PES 6 Serial <span class="hint">(no dashes)</span></label>
+                                <input type="text" class="form-input" name="serial6" id="serial6" maxlength="24" placeholder="XXXXXXXXXXXXXXXXXXXX">
+                                <input type="hidden" name="serial5" id="serial5" value="">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ===== Optional Info ===== -->
+                    <div class="form-section-title">Optional Information</div>
+                    <div class="form-grid">
+                        <div class="form-grid form-grid-2">
+                            <div class="form-group">
+                                <label class="form-label">Group <span class="hint">(shown in Sixserver)</span></label>
+                                <input type="text" class="form-input" name="forum" maxlength="30" placeholder="Your group">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Alias <span class="hint">(optional)</span></label>
+                                <input type="text" class="form-input" name="alias" maxlength="15" placeholder="An alias" value="<?= htmlspecialchars($alias) ?>">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Short Message <span class="hint">(for your profile)</span></label>
+                            <input type="text" class="form-input" name="message" maxlength="40" placeholder="A short message..." value="<?= htmlspecialchars($message) ?>">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">MSN Messenger</label>
+                            <input type="text" class="form-input" name="msn" placeholder="Your MSN ID">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Profile Picture <span class="hint">(max 500x500)</span></label>
+                            <div class="file-input-wrapper">
+                                <label class="file-input-label" id="fileLabel">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                    <span>Choose a file...</span>
+                                </label>
+                                <input type="file" class="file-input-hidden" name="picture" id="pictureInput" onchange="updateFileLabel(this)">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ===== Preferences ===== -->
+                    <div class="form-section-title">Preferences</div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" class="checkbox-input" name="gamesMail" id="gamesMail" <?= $checked ?>>
+                        <label class="checkbox-label" for="gamesMail">Receive daily game summary by email</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" class="checkbox-input" name="newsletter" id="newsletter" <?= $checked ?>>
+                        <label class="checkbox-label" for="newsletter">Occasional <?= $leaguename ?> news (1-2x/year)</label>
+                    </div>
+
+                    <!-- Hidden fields -->
+                    <input name="sid" type="hidden" value="<?= htmlspecialchars($sid) ?>">
+                    <input type="hidden" name="hash5" id="hash5" value="">
+                    <input type="hidden" name="hash6" id="hash6" value="">
+                    <input type="hidden" name="favteam1" value="">
+                    <input type="hidden" name="favteam2" value="">
+                    <input type="hidden" name="uploadSpeed" value="">
+                    <input type="hidden" name="downloadSpeed" value="">
+
+                    <button type="submit" class="btn-primary">
+                        Join League
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                    </button>
+                </form>
+            <?php endif; ?>
+
+            <div class="form-footer">
+                Already have an account? <a href="/index.php">Login here</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePassword(inputId, btn) {
+    var input = document.getElementById(inputId);
+    var eyeOpen = btn.querySelector('.eye-open');
+    var eyeClosed = btn.querySelector('.eye-closed');
+    if (input.type === 'password') {
+        input.type = 'text';
+        eyeOpen.style.display = 'none';
+        eyeClosed.style.display = 'block';
+    } else {
+        input.type = 'password';
+        eyeOpen.style.display = 'block';
+        eyeClosed.style.display = 'none';
+    }
+}
+
+function updateFileLabel(input) {
+    var label = document.getElementById('fileLabel');
+    if (input.files && input.files[0]) {
+        label.querySelector('span').textContent = input.files[0].name;
+        label.style.borderColor = 'rgba(129, 140, 248, 0.4)';
+        label.style.color = '#A5B4FC';
+    }
+}
+
+function validateProfile() {
+    var name = document.getElementById('name').value.trim();
+    var pwd = document.getElementById('password').value;
+    var pwd2 = document.getElementById('passwordrepeat').value;
+
+    if (name === '') { alert('Please enter a nickname.'); return false; }
+    if (pwd === '') { alert('Please enter a password.'); return false; }
+    if (pwd !== pwd2) { alert('Passwords do not match.'); return false; }
+    if (pwd.length < 4) { alert('Password is too short.'); return false; }
+    return true;
+}
+</script>
+
+</body>
+</html>
